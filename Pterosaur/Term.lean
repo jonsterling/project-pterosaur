@@ -6,9 +6,9 @@ mutual
   inductive Term : Nat → Type where
   | localVar (ix : Ix n) : Term n
   | globalVar (name : Name) : Term n
-  | prod (boundName? : Option String) (dom : Term n) (cod : Term (n+1)) : Term n
+  | funTp {n} (boundName? : Option String) (dom : Term n) (cod : Term (n+1)) : Term n
   | lam (boundName? : Option String) (dom : Term n) (body : Term (n+1)) : Term n
-  | sum (locale? : Option Name) (selfName? : Option String) (methods : Term.ManifestDict (n+1)) : Term n
+  | rcdTp (locale? : Option Name) (selfName? : Option String) (methods : Term.ManifestDict (n+1)) : Term n
   | obj (locale? : Option Name) (selfName? : Option String) (manifest dict : Term.Dict (n+1)) : Term n
   | app : Term n → Term n → Term n
   | call : Term n → Name → Term n
@@ -74,11 +74,11 @@ mutual
   | .lam name? _dom body =>
     let name := Option.getD name? "_"
     .group $ "λ " ++ name ++ " => " ++ .nest 2 (body.format (ρ⬝name) minPrec)
-  | .prod name? dom fam =>
+  | .funTp name? dom fam =>
     let name := Option.getD name? "_"
     .group $ "(" ++ name ++ " : " ++ dom.format ρ minPrec ++ ")" ++ " →" ++ .line ++ fam.format (ρ⬝name) minPrec
 
-  | .sum none selfName? methods =>
+  | .rcdTp none selfName? methods =>
     let selfName := Option.getD selfName? "_"
     let body :=
       (f!"," ++ .line).joinSep $ methods.toList.map λ ⟨ℓ, type, manifest?⟩ =>
@@ -91,7 +91,8 @@ mutual
       | none => .nil
       | some selfName => f!"{selfName} => "
     .group $ "record " ++ "{" ++ binder  ++ .nest 1 body ++ "}"
-  | .sum (some localeName) selfName? methods =>
+
+  | .rcdTp (some localeName) selfName? methods =>
     let selfName := Option.getD selfName? "_"
     let manifestMethods : List Std.Format :=
       methods.toList.filterMap λ ⟨ℓ, _, manifest?⟩ =>

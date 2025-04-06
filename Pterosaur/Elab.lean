@@ -20,16 +20,16 @@ mutual
   partial
   def Preterm.checkTerm (ρ : Resolver) : Preterm → TermChecker ElabM n
   | .lam name M =>
-    Connective.Product.introduction name $ Tactic.withTopHyp $
+    funIntro name $ Tactic.withTopHyp $
     M.checkTerm ∘ ρ.ext name
   | .pi name A B =>
-    Connective.Product.formation name (A.checkTerm ρ) $ Tactic.withTopHyp $
+    funFormation name (A.checkTerm ρ) $ Tactic.withTopHyp $
     B.checkTerm ∘ ρ.ext name
   | .sig spec =>
-    Connective.Sum.formation.anonymous spec.selfName? $ spec.check ρ
+    recordFormation spec.selfName? $ spec.check ρ
   | .object selfName? (dict : Predict) =>
-    Connective.Sum.introduction $ dict.checkObjectDict ρ selfName?
-  | .TYPE => Connective.Universe.formation
+    recordIntro $ dict.checkObjectDict ρ selfName?
+  | .TYPE => universeFormation
   | .reveal name scope =>
     reveal name $ scope.checkTerm ρ
   | .hole name => checkHole name
@@ -52,10 +52,9 @@ mutual
   def Preterm.checkValue (ρ : Resolver): Preterm → ValueChecker ElabM n :=
     evalCheckTerm ∘ Preterm.checkTerm ρ
 
-
   partial
   def Predict.checkObjectDict (ρ : Resolver) (selfName? : Option String) (dict : Predict) : ObjectDictChecker ElabM n :=
-    .introduction selfName? $ dict.map λ ⟨ℓ, M⟩ =>
+    checkObjectDict selfName? $ dict.map λ ⟨ℓ, M⟩ =>
     ⟨ℓ, Tactic.withTopHyp $ M.checkTerm ∘ ρ.ext? selfName?⟩
 
   partial
@@ -70,11 +69,11 @@ mutual
     | none => .fail s!"Unresolved name {name}"
     | some hyp => hypothesis hyp
   | .app M N =>
-    Connective.Product.elimination (M.synth ρ) $ N.checkValue ρ
+    funElim (M.synth ρ) $ N.checkValue ρ
   | .call M ℓ =>
-    Connective.Sum.elimination (M.synth ρ) ℓ
+    recordElim (M.synth ρ) ℓ
   | .refine target selfName? (inst : Predict) =>
-    Connective.Sum.refine (target.synth ρ) $ inst.refineRecordSpec ρ selfName?
+    refineRecordType (target.synth ρ) $ inst.refineRecordSpec ρ selfName?
   | .ann term type =>
     ascribe (type.checkValue ρ) (term.checkValue ρ)
   | _ => .fail "Elaboration impossible"

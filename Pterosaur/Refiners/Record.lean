@@ -1,33 +1,31 @@
 import Pterosaur.RefinerTypes
 
-namespace Connective.Sum
-
 variable [Monad m] [MonadState Theory m] [MonadExcept String m]
 
-def formation.locale (locale : Name) (tac : RecordSpecRefiner m n) : ValueSynthesiser m n:=
+def localeFormation (locale : Name) (tac : RecordSpecRefiner m n) : ValueSynthesiser m n:=
   λ Γ => do
   let 𝕋 ← get
   match 𝕋.getLocaleSpec locale with
   | none =>
-    throw s!"Sum.formation.locale: no locale named {locale}"
+    throw s!"localeFormation: no locale named {locale}"
   | some spec => do
     let rspec ← tac Γ spec.spec
-    let type := Value.sum locale spec.selfName? rspec
+    let type := Value.rcdTp locale spec.selfName? rspec
     return ⟨type, .TYPE⟩
 
-def formation.anonymous (selfName? : Option String) (tac : RecordSpecExtender m n) : TermChecker m n :=
+def recordFormation (selfName? : Option String) (tac : RecordSpecExtender m n) : TermChecker m n :=
   λ Γ sort =>
   match sort.destructTYPE with
   | none =>
-    throw "Sum.formation.anonymous expected sort"
+    throw "recordFormation expected sort"
   | some () => do
     let tele ← tac Γ ⟨sort, []⟩
-    return .sum none selfName? $ tele.quote (← get) selfName?
+    return .rcdTp none selfName? $ tele.quote (← get) selfName?
 
-def refine (tacType : ValueSynthesiser m n) (tacRefine : RecordSpecRefiner m n) : ValueSynthesiser m n :=
+def refineRecordType (tacType : ValueSynthesiser m n) (tacRefine : RecordSpecRefiner m n) : ValueSynthesiser m n :=
   λ Γ => do
   let type ← tacType Γ
-  match type.value.destructRcd with
+  match type.value.destructRcdTp with
   | none =>
     let 𝕋 ← get
     let ttype := type.value.quote 𝕋
@@ -42,26 +40,26 @@ def refine (tacType : ValueSynthesiser m n) (tacRefine : RecordSpecRefiner m n) 
       | _ => none
     return {value := Value.refine (← get) type.value selfName? spec updates, type := .TYPE}
 
-def introduction (tac : ObjectDictChecker m n) : TermChecker m n :=
+def recordIntro (tac : ObjectDictChecker m n) : TermChecker m n :=
   λ Γ type => do
-  match type.destructRcd with
+  match type.destructRcdTp with
   | none =>
     let ttype := type.quote (← get)
-    throw s!"Sum.introduction expected sum type but got {ttype.format Γ.names 0}"
+    throw s!"recordIntro expected sum type but got {ttype.format Γ.names 0}"
   | some ⟨locale?, selfName?, spec⟩ =>
     let ⟨manifest, primary⟩ ← tac Γ spec
     return .obj locale? selfName? manifest primary
 
-def elimination (tac : ValueSynthesiser m n) (ℓ : Name) : ValueSynthesiser m n :=
+def recordElim (tac : ValueSynthesiser m n) (ℓ : Name) : ValueSynthesiser m n :=
   λ Γ => do
   let 𝕋 ← get
   let M ← tac Γ
-  match M.type.destructRcd with
-  | none => throw s!"Sum.elimination: expected sum type"
+  match M.type.destructRcdTp with
+  | none => throw s!"recordElim: expected sum type"
   | some ⟨locale?, _selfName?, spec⟩ =>
     let nope := do
       let tspec := M.type.whnf.quote 𝕋
-      throw s!"Sum.elimination: could not find method `{ℓ}` on spec: {tspec.format Γ.names 0} / {(M.value.quote 𝕋).format Γ.names 0}"
+      throw s!"recordElim: could not find method `{ℓ}` on spec: {tspec.format Γ.names 0} / {(M.value.quote 𝕋).format Γ.names 0}"
     match locale?, spec.lookup ℓ with
     | _, some ⟨B, _⟩ =>  do
       return {
@@ -80,9 +78,9 @@ def elimination (tac : ValueSynthesiser m n) (ℓ : Name) : ValueSynthesiser m n
         }
 
 partial
-def coercion (coeMethod : CoerceTerm m n) : CoerceTerm m n :=
+def recordCoercion (coeMethod : CoerceTerm m n) : CoerceTerm m n :=
   λ Γ ⟨M0, C0, C1⟩ => do
-  match C0.destructRcd, C1.destructRcd with
+  match C0.destructRcdTp, C1.destructRcdTp with
   | some ⟨locale0?, selfName0?, spec0⟩, some ⟨locale1?, selfName1?, spec1⟩ =>
     let rec loop (manifest0 primary0 manifest1 primary1 : Closure.Dict) : (spec0 spec1 : RecordSpec) → m (CoercionResult (Term.Dict (n+1) × Term.Dict (n+1)))
     | [], [] => do

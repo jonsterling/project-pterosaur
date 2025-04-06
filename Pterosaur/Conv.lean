@@ -14,13 +14,13 @@ mutual
   def Value.isIrrelevant (n : Nat) : Value → Bool
   | .neu _ (.translucent V) =>
     V.get.isIrrelevant n
-  | .prod _ A B =>
+  | .funTp _ A B =>
     let x := fresh n A
     let Bx := B.inst 𝕋 x
     Bx.isIrrelevant (n+1)
 
-  | .sum locale? selfName? methods =>
-    let x := fresh n $ .sum locale? selfName? methods
+  | .rcdTp locale? selfName? methods =>
+    let x := fresh n $ .rcdTp locale? selfName? methods
     List.all methods λ ⟨_, cell⟩ =>
     match cell.manifest? with
     | some _ => true
@@ -41,12 +41,12 @@ mutual
     | true => return ()
     | false => Neutral.convert n N0 N1
 
-  | .prod _ A0 B0, .prod _ A1 B1 => do
+  | .funTp _ A0 B0, .funTp _ A1 B1 => do
     Value.convert n A0 A1
     let x := fresh n A0
     Value.convert (n+1) (B0.inst 𝕋 x) (B1.inst 𝕋 x)
 
-  | .sum locale0? selfName? (methods0 : RecordSpec), .sum locale1? _ (methods1 : RecordSpec) =>
+  | .rcdTp locale0? selfName? (methods0 : RecordSpec), .rcdTp locale1? _ (methods1 : RecordSpec) =>
     if locale0? == locale1?
     then RecordSpec.convert n selfName? methods0 methods1
     else throw "Value.convert: mismatched locale names"
@@ -79,7 +79,7 @@ mutual
     | ⟨method0, type0, manifest0?⟩ :: methods0, ⟨method1, type1, manifest1?⟩ :: methods1 =>
       if method0 == method1
       then do
-        let x := fresh n $ .sum none selfName? Self
+        let x := fresh n $ .rcdTp none selfName? Self
         let type0x := type0.inst 𝕋 x
         let type1x := type1.inst 𝕋 x
         Value.convert (n+1) type0x type1x

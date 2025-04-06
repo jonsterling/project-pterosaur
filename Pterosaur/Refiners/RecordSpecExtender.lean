@@ -11,7 +11,7 @@ def require (selfName? : Option String) (ℓ : Name) (tacA : TermChecker m (n+1)
   λ Γ ⟨sort, Self⟩ => do
   if List.contains (Self.map Prod.fst) ℓ
   then throw s!"RecordSpec.require: duplicate method specification {ℓ}"
-  let tpSelf := Value.sum none selfName? Self
+  let tpSelf := Value.rcdTp none selfName? Self
   let x := fresh n tpSelf
   let Γ' := Γ.ext selfName? tpSelf x
   let type ← tacA Γ' sort
@@ -31,13 +31,13 @@ def splice (selfName? : Option String) (target : Name) (tacType : TermChecker m 
   λ Γ ⟨sort, Self⟩ => do
   if List.contains (Self.map Prod.fst) target
   then throw s!"RecordSpec.splice: duplicate method specification {target}"
-  let tpSelf := Value.sum none selfName? Self
+  let tpSelf := Value.rcdTp none selfName? Self
   let x := fresh n tpSelf
   let Γ' := Γ.ext selfName? tpSelf x
   let typex ← tacType Γ' sort
   let 𝕋 ← get
   let vtypex := typex.eval 𝕋 Γ'.values
-  match vtypex.destructRcd with
+  match vtypex.destructRcdTp with
   | none => throw s!"RecordSpec.splice: expected locale type"
   | some ⟨none, _, _⟩ => throw s!"RecordSpec.splice: expected locale type"
   | some ⟨locale?, innerSelf?, specx⟩ =>

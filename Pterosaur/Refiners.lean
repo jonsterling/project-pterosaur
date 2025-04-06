@@ -11,8 +11,8 @@ import Pterosaur.Refiners.Structural
 import Pterosaur.Refiners.RecordSpecRefiner
 import Pterosaur.Refiners.RecordSpecExtender
 import Pterosaur.Refiners.ObjectDictChecker
-import Pterosaur.Refiners.Product
-import Pterosaur.Refiners.Sum
+import Pterosaur.Refiners.Function
+import Pterosaur.Refiners.Record
 import Pterosaur.Refiners.Universe
 import Std.Data.HashMap
 
@@ -36,10 +36,10 @@ namespace Kernel
     assertUnusedLocaleName name
     assertUnusedName name
     modify $ Theory.insertLocale name locale
-    let defn ← Connective.Sum.formation.locale name (.refine none []) ({} : LocalEnv 0)
+    let defn ← localeFormation name (.refine none []) ({} : LocalEnv 0)
     modify $ Theory.insertGlobal name $ .translucent defn
     let type := Term.globalVar name
-    let foo := Term.sum none "self" (@spec.quote (← get) 0 "self")
+    let foo := Term.rcdTp none "self" (@spec.quote (← get) 0 "self")
     IO.println f!"Declared locale {name} equivalent to: {Std.Format.line}{Std.Format.nest 1 (foo.format {} 0)}\n"
     return {value := type.eval (← get) {}, type := defn.type}
 
@@ -48,7 +48,7 @@ namespace Kernel
     match 𝕋.locales[localeName]? with
     | none => throw s!"Could not extend nonexistent locale `{localeName}`"
     | some locale =>
-      let Self := Value.sum localeName selfName? locale.spec
+      let Self := Value.rcdTp localeName selfName? locale.spec
       let self := fresh 0 Self
       let Γ := LocalEnv.empty.ext selfName? Self self
       let tmA ← tacA Γ .TYPE
@@ -83,7 +83,7 @@ namespace Tactic
   def autoCoerceTerm {n : Nat} : CoerceTerm m n :=
     withCoercionGoalType λ type =>
     match type.whnf with
-    | .prod .. => Connective.Product.coercion autoCoerceTerm autoCoerceTerm
-    | .sum .. => Connective.Sum.coercion autoCoerceTerm
+    | .funTp .. => funCoercion autoCoerceTerm autoCoerceTerm
+    | .rcdTp .. => recordCoercion autoCoerceTerm
     | _ => .shift
 end Tactic

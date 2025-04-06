@@ -14,13 +14,14 @@ variable (𝕋 : Theory)
 mutual
   partial
   def Value.quote : Value → Term n
-  | .prod name? A B =>
+  | .funTp name? A B =>
     let x := fresh n A
-    .prod name? A.quote (B.inst 𝕋 x).quote
+    .funTp name? A.quote (B.inst 𝕋 x).quote
   | .lam name? A M =>
     let x := fresh n A.get
     .lam name? A.get.quote (M.inst 𝕋 x).quote
-  | .sum locale? selfName? (methods : RecordSpec) => .sum locale? selfName? (methods.quote selfName?)
+  | .rcdTp locale? selfName? (methods : RecordSpec) =>
+    .rcdTp locale? selfName? (methods.quote selfName?)
   | .obj locale? selfName? (manifest : Closure.Dict) (dict : Closure.Dict) =>
     .obj locale? selfName? (manifest.quote selfName?) (dict.quote selfName?)
   | .neu E _ => E.quote
@@ -42,7 +43,7 @@ mutual
     let rec loop (Self : RecordSpec)
     | [] => []
     | ⟨ℓ, type, manifest?⟩ :: rest =>
-      let x := fresh n $ .sum none selfName? Self
+      let x := fresh n $ .rcdTp none selfName? Self
       let typex := (type.inst 𝕋 x).quote
       let manifest?x := manifest?.map λ manifest => (manifest.inst 𝕋 x).quote
       ⟨ℓ, typex, manifest?x⟩ :: loop (Self ++ [⟨ℓ, type, manifest?⟩]) rest
@@ -58,7 +59,7 @@ mutual
   def SpecRefinement.quote (selfName? : Option String) (spec : RecordSpec) : Closure.Dict → Term.Dict (n+1)
   | [] => .nil
   | ⟨ℓ, impl⟩ :: rest =>
-    let x := fresh n $ .sum none selfName? spec
+    let x := fresh n $ .rcdTp none selfName? spec
     let implx := impl.inst 𝕋 x
     .cons ℓ implx.quote $ SpecRefinement.quote selfName? spec rest
 

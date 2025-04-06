@@ -23,4 +23,4 @@ def LocalEnv.ext (Γ : LocalEnv n) (name : Option String) (A : Value) (a : Value
 def Sequent.quote (𝕋 : Theory) : {n : Nat} → (Γ : LocalEnv n) → (B : Term n) → Term 0
 | 0, _, B => B
 | _+1, ⟨Γ⬝A, γ⬝_, ρ⬝nm⟩, B =>
-  Sequent.quote 𝕋 ⟨Γ,γ,ρ⟩ $ Term.prod nm (A.quote 𝕋) B
+  Sequent.quote 𝕋 ⟨Γ,γ,ρ⟩ $ Term.funTp nm (A.quote 𝕋) B

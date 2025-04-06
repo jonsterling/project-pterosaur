@@ -47,8 +47,8 @@ deriving Repr
 mutual
   inductive Value : Type where
   | neu : Neutral Value → Boundary Value → Value
-  | prod (name? : Option String) (dom : Value) (cod : Closure Value)
-  | sum (locale? : Option Name) (selfName? : Option String) (tele : List (Name × ManifestCell Value))
+  | funTp (name? : Option String) (dom : Value) (cod : Closure Value)
+  | rcdTp (locale? : Option Name) (selfName? : Option String) (tele : List (Name × ManifestCell Value))
   | lam (name? : Option String) (dom : Thunk Value) (body : Closure Value)
   | obj (locale? : Option Name) (selfName? : Option String) (manifest dict : List (Name × Closure Value))
   | TYPE
@@ -66,14 +66,14 @@ def Value.whnf : Value → Value
 | .neu _ (.translucent V) => Value.whnf V.get
 | V => V
 
-def Value.destructProd : Value → Option (Option String × Value × Closure Value)
-| .neu _ (.translucent V) => V.get.destructProd
-| .prod name? A B => return ⟨ name?, A, B ⟩
+def Value.destructFunTp : Value → Option (Option String × Value × Closure Value)
+| .neu _ (.translucent V) => V.get.destructFunTp
+| .funTp name? A B => return ⟨ name?, A, B ⟩
 | _ => none
 
-def Value.destructRcd : Value → Option (Option Name × Option String × RecordSpec)
-| .neu _ (.translucent V) => V.get.destructRcd
-| .sum locale? selfName? spec => some ⟨locale?, selfName?, spec⟩
+def Value.destructRcdTp : Value → Option (Option Name × Option String × RecordSpec)
+| .neu _ (.translucent V) => V.get.destructRcdTp
+| .rcdTp locale? selfName? spec => some ⟨locale?, selfName?, spec⟩
 | _ => none
 
 def Value.destructTYPE : Value → Option Unit
@@ -105,7 +105,7 @@ def RecordSpec.purify : RecordSpec → PurifiedRecordSpec :=
   | [] => purified
   | ⟨ℓ, cell@⟨A,M?⟩⟩ :: rest =>
     let manifestObj := Value.obj none none purified.partialManifest []
-    let tpOldSelf := Value.sum none none OldSelf
+    let tpOldSelf := Value.rcdTp none none OldSelf
     let update clo : Closure Value :=
       ⟨{} ⬝ Value.lam none tpOldSelf clo ⬝ manifestObj,
       let methods :=
@@ -135,8 +135,6 @@ def Term.ManifestDict.close (γ : Bwd Value n) : Term.ManifestDict (n+1) → Rec
 def Term.Dict.close (γ : Bwd Value n) : Term.Dict (n+1) → List (Name × Closure Value)
 | .nil => []
 | .cons name term rest => ⟨name, ⟨γ, term⟩⟩ :: rest.close γ
-
-
 
 def Frame.plugNeutral (neu : Neutral Value) (frm : Frame Value) : Neutral Value :=
   {neu with
