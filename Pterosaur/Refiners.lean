@@ -48,8 +48,7 @@ namespace Kernel
     let assertCoherence (localeSpec : LocaleSpec) (ext : LocaleExtension) : m Unit := do
       let 𝕋 ← get
       let Self := Value.rcdTp localeName none localeSpec.spec
-      match localeSpec.extensions[name]? with
-      | some ext' =>
+      for ext' in localeSpec.extensions[name]? do
         let x := fresh 0 Self
         let typex0 := ext.type.inst 𝕋 x
         let typex1 := ext'.type.inst 𝕋 x
@@ -58,22 +57,20 @@ namespace Kernel
         let implx0 := ext.impl.inst 𝕋 x
         let implx1 := ext'.impl.inst 𝕋 x
         convert Γ implx0 implx1
-      | none => pure ()
 
     let rec loop (seen : Std.HashSet Name) (localeName : Name) (ext : LocaleExtension) : m Unit := do
       let 𝕋 ← get
 
-      match 𝕋.locales[localeName]? with
-      | none => throw s!"Could not extend nonexistent locale `{localeName}`"
-      | some localeSpec => do
+      for localeSpec in 𝕋.locales[localeName]? do
         assertCoherence localeSpec ext
 
         if localeName ∈ seen then
-          return ()
+          return
 
         let Self := Value.rcdTp localeName none localeSpec.spec
         let updatedSpec := {localeSpec with extensions := localeSpec.extensions.insert name ext}
         MonadState.set {𝕋 with locales := 𝕋.locales.insert localeName updatedSpec}
+
         for ⟨importingLocale, coercion⟩ in localeSpec.importedBy do
           loop (seen.insert localeName) importingLocale {
             type := sequenceClosure coercion $ .lam none Self ext.type,
