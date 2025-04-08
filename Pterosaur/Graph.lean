@@ -10,7 +10,7 @@ structure Graph (α : Type u) [BEq α] [Hashable α] (β : Type v) where
   vertices : Std.HashMap α (Array (Edge α β))
 
 namespace Graph
-  variable {α : Type} [Inhabited α] [BEq α] [Hashable α] [Inhabited α] {β : Type}
+  variable {α : Type} [BEq α] [Hashable α] {β : Type}
 
   def empty : Graph α β := ⟨{}⟩
 
