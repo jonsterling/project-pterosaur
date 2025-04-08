@@ -14,11 +14,8 @@ namespace Graph
 
   def empty : Graph α β := ⟨{}⟩
 
-  def addVertex (g : Graph α β) (vertex : α) : Graph α β × Nat :=
-    let res := { g with vertices := g.vertices.insert vertex #[] }
-    let id : Nat := res.vertices.size - 1
-    (res, id)
-
+  def addVertex (g : Graph α β) (vertex : α) : Graph α β :=
+    { g with vertices := g.vertices.insertIfNew vertex #[] }
 
   def addEdge (g : Graph α β) (source target : α) (label : β) : Graph α β := {
     g with vertices :=
@@ -34,7 +31,7 @@ namespace Graph
     Id.run do
       let mut res : Array α := #[]
       for ⟨x, fan⟩ in g.vertices do
-        if (fan.filter χ).size > 0 then
+        if Option.isSome $ fan.find? χ then
           res := res.push x
       return res
 end Graph
