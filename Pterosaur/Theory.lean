@@ -21,7 +21,8 @@ deriving Repr, Nonempty
 structure LocaleSpec where
   selfName? : Option String
   spec : RecordSpec
-  extensions : Std.HashMap Name LocaleExtension
+  extensions : Std.HashMap Name LocaleExtension := {}
+  importedBy : Array (Name × Value) := #[]
 deriving Repr, Nonempty
 
 inductive Entry where

@@ -32,7 +32,7 @@ namespace Kernel
 
   def declareLocale (name : Name) (selfName? : Option String) (tacTele : RecordSpecExtender ElabM 0) : ElabM Defined := do
     let spec ← tacTele {} ⟨.TYPE, []⟩
-    let locale := {selfName?, spec, extensions := {}}
+    let locale := {selfName?, spec}
     assertUnusedLocaleName name
     assertUnusedName name
     modify $ Theory.insertLocale name locale
@@ -42,6 +42,42 @@ namespace Kernel
     let foo := Term.rcdTp none "self" (@spec.quote (← get) 0 "self")
     IO.println f!"Declared locale {name} equivalent to: {Std.Format.line}{Std.Format.nest 1 (foo.format {} 0)}\n"
     return {value := type.eval (← get) {}, type := defn.type}
+
+  partial
+  def insertLocaleExtension (localeName : Name) (name : Name) (ext : LocaleExtension) : m Unit := do
+    let rec loop (seen : Std.HashSet Name) (localeName : Name) (ext : LocaleExtension) : m Unit := do
+      let 𝕋 ← get
+
+      if localeName ∈ seen then
+        throw s!"Detected loop during locale extension"
+
+      match 𝕋.locales[localeName]? with
+      | none => throw s!"Could not extend nonexistent locale `{localeName}`"
+      | some localeSpec => do
+        let Self := Value.rcdTp localeName none localeSpec.spec
+
+        match localeSpec.extensions[name]? with
+        | some ext' =>
+          let x := fresh 0 Self
+          let typex0 := ext.type.inst 𝕋 x
+          let typex1 := ext'.type.inst 𝕋 x
+          let Γ : LocalEnv 1 := LocalEnv.empty.ext none Self x
+          convert Γ typex0 typex1
+          let implx0 := ext.impl.inst 𝕋 x
+          let implx1 := ext'.impl.inst 𝕋 x
+          convert Γ implx0 implx1
+        | none => pure ();
+
+        let updatedSpec := {localeSpec with extensions := localeSpec.extensions.insert name ext}
+        MonadState.set {𝕋 with locales := 𝕋.locales.insert localeName updatedSpec}
+        for ⟨importingLocale, coercion⟩ in localeSpec.importedBy do
+          loop (seen.insert localeName) importingLocale {
+            type := sequenceClosure coercion $ .lam none Self ext.type,
+            impl := sequenceClosure coercion $ .lam none Self ext.impl
+          }
+
+    loop {} localeName ext
+
 
   def extendLocale (localeName : Name) (name : Name) (selfName? : Option String) (tacA : TermChecker m 1) (tacM : TermChecker m 1) : m Unit := do
     let 𝕋 ← get
@@ -54,15 +90,11 @@ namespace Kernel
       let tmA ← tacA Γ .TYPE
       let valA := tmA.eval (← get) Γ.values
       let tmM ← tacM Γ valA
-      let extension := {
+      insertLocaleExtension localeName name {
         type := ⟨{}, tmA⟩,
         impl := ⟨{}, tmM⟩
       }
-      let locale := {
-        locale with
-          extensions := locale.extensions.insert name extension
-      }
-      MonadState.set {𝕋 with locales := 𝕋.locales.insert localeName locale}
+
 end Kernel
 
 namespace Tactic

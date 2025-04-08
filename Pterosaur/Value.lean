@@ -122,8 +122,8 @@ def RecordSpec.purify : RecordSpec → PurifiedRecordSpec :=
 
   loop [] {partialManifest := {}, methods := {}}
 
-
-
+def sequenceClosure (pre : Value) (post : Value) : Closure Value :=
+  ⟨{} ⬝ post ⬝ pre, .app (.localVar (.pop (.pop .top))) (.app (.localVar (.pop .top)) (.localVar .top))⟩
 
 def Term.ManifestDict.close (γ : Bwd Value n) : Term.ManifestDict (n+1) → RecordSpec
 | .nil => []
